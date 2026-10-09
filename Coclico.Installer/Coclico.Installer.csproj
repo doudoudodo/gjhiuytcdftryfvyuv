@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
+    <!-- Restaure les cibles Windows même depuis un agent Linux (soumission automatique des dépendances GitHub). -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Resources\plage.ico</ApplicationIcon>
+    <!-- La version est centralisée dans version.txt à la racine (voir Directory.Build.props). -->
+    <Company>Coclico</Company>
+    <Product>Coclico Setup</Product>
+    <Description>Installer and maintenance manager for Coclico</Description>
+    <Copyright>© 2026 Coclico</Copyright>
+    <NeutralLanguage>fr</NeutralLanguage>
+
+    <!-- Optimisations d'exécution -->
+    <TieredPGO>true</TieredPGO>
+    <TieredCompilation>true</TieredCompilation>
+    <OptimizationPreference>Speed</OptimizationPreference>
+
+    <!-- Single file publish options -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\plage.ico" />
+    <Resource Include="Resources\plage.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Payload d'installation, embarque uniquement dans le build complet (EmbedPayload != false).
+         Le build sans payload sert a produire le desinstalleur leger. -->
+    <EmbeddedResource Include="payload.zip" Condition="Exists('payload.zip') and '$(EmbedPayload)' != 'false'" />
+    <!-- Desinstalleur leger embarque dans le setup par le script de build :
+         evite de copier le setup complet (~450 Mo) dans le dossier d'installation. -->
+    <EmbeddedResource Include="uninstaller.bin" Condition="Exists('uninstaller.bin')" />
+    <EmbeddedResource Include="Assets\ai-models.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.2.0" />
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>
+

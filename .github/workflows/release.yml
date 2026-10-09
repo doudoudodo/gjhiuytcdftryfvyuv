@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Vérifier cohérence tag ↔ version.txt
+        shell: pwsh
+        run: |
+          $version = (Get-Content version.txt -Raw).Trim()
+          $tag = "${{ github.ref_name }}"
+          if ($tag -like "v*") {
+            if ($tag -ne "v$version") {
+              Write-Error "Le tag $tag ne correspond pas à version.txt (v$version)"
+              exit 1
+            }
+          }
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Coclico.slnx
+
+      - name: Build installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1
+
+      - name: Générer SHA256SUMS
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Recurse -Include *.exe,*.zip -Path ./installer/output, ./publish -ErrorAction SilentlyContinue
+          if (-not $files) { $files = Get-ChildItem -Recurse -Include *.exe,*.zip -Path . -Depth 2 | Where-Object { $_.FullName -notmatch '\\\.github\\' } }
+          $lines = foreach ($f in $files) { "{0}  {1}" -f (Get-FileHash $f.FullName -Algorithm SHA256).Hash, $f.Name }
+          if ($lines) { $lines | Out-File -Encoding utf8 SHA256SUMS.txt }
+
+      - name: Créer la Release GitHub (draft)
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            SHA256SUMS.txt
